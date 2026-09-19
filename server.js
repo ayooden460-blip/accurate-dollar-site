@@ -1,4 +1,4 @@
-import express from "express";
+      import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import crypto from "crypto";
@@ -15,8 +15,6 @@ const PAYSTACK_BASE = "https://api.paystack.co";
 
 app.use(cors({ origin: CLIENT_URL }));
 
-// Paystack webhook needs the raw request body to verify the signature,
-// so it's registered BEFORE express.json() below.
 app.post(
   "/api/webhook",
   express.raw({ type: "application/json" }),
@@ -35,7 +33,6 @@ app.post(
     if (event.event === "charge.success") {
       const orderId = event.data.metadata.orderId;
       markOrderPaid(orderId);
-      // Real version: email the download links to event.data.customer.email here.
     }
 
     res.json({ received: true });
@@ -44,15 +41,13 @@ app.post(
 
 app.use(express.json());
 
-// List products — the front end fetches this instead of hardcoding them.
 app.get("/api/products", (req, res) => {
-  res.json(PRODUCTS.map(({ downloadUrl, ...p }) => p)); // never send download links before payment
+  res.json(PRODUCTS.map(({ downloadUrl, ...p }) => p));
 });
 
-// Start a Paystack transaction for a cart, return the checkout URL.
 app.post("/api/checkout", async (req, res) => {
   try {
-    const { items, email } = req.body; // items: [{ id, qty }]
+    const { items, email } = req.body;
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "Cart is empty." });
     }
@@ -64,7 +59,7 @@ app.post("/api/checkout", async (req, res) => {
     for (const { id, qty } of items) {
       const product = PRODUCTS.find((p) => p.id === id);
       if (!product || qty < 1) continue;
-      total += product.price * qty; // already in kobo
+      total += product.price * qty;
     }
     if (total === 0) {
       return res.status(400).json({ error: "No valid items in cart." });
@@ -81,9 +76,9 @@ app.post("/api/checkout", async (req, res) => {
       },
       body: JSON.stringify({
         email,
-        amount: total, // kobo
+        amount: total,
         currency: "NGN",
-        callback_url: `${CLIENT_URL}/success?order=${orderId}`,
+        callback_url: `${CLIENT_URL}/?order=${orderId}`,
         metadata: { orderId },
       }),
     });
@@ -101,7 +96,6 @@ app.post("/api/checkout", async (req, res) => {
   }
 });
 
-// Check an order's status (e.g. for a "your order is ready" page).
 app.get("/api/orders/:id", async (req, res) => {
   const order = getOrder(req.params.id);
   if (!order) return res.status(404).json({ error: "Order not found." });
